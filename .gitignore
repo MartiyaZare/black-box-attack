@@ -1,9 +1,12 @@
+.gitignore
 Backups
 Data_Set
 Meng Code
 Raw_Data
 Sample_Code
 Trained_Model
+Results_notebook_save
+Results.xlsx
 __pycache__
 .ipynb_checkpoints
 *.h5
