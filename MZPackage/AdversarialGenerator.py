@@ -72,15 +72,21 @@ class AdversarialGenerator:
         attackSample = seed    
         return attackSample
         
-    def generateAttackSamples(self, modelType, count, thre = None):
+    def generateRandomDataSeq(self, modelType):
+        return getReshapedDataSetNoSplit(np.random.rand(1,self.sequenceLen,self.dimensionsCount),modelType)
+        
+    def generateAttackSamples(self, modelType, count, thre = None, aggressive = 0):
+        maxIterations = 2000
         if(thre == None):
             thre = self.thresholds[modelType]
+        if(aggressive):
+            thre = thre/32
         model = load_model('Trained_Model/' + modelType + '.h5')
         attackSamples = list()    
         for i in tqdm.tqdm(range(count)):        
-            randSample = getReshapedDataSetNoSplit(np.random.rand(1,self.sequenceLen,self.dimensionsCount),modelType)        
-            mse = 1000
-            attackSample = randSample
+            attackSample = self.generateRandomDataSeq(modelType)
+            mse = 1000                                              
+            iteration = 0
             while mse > thre:            
                 attackSample = self.mzAttackSampleGeneratorFromAnomaly(model, 1, attackSample, 0.001)            
                 predicted = model.predict(attackSample)
@@ -88,6 +94,11 @@ class AdversarialGenerator:
                     mse = (np.square(attackSample - predicted)).mean(axis=2).mean(axis=1)  
                 else:
                     mse = (np.square(attackSample - predicted)).mean(axis=1) 
+                iteration += 1
+                if(iteration >= maxIterations):
+                    attackSample = self.generateRandomDataSeq(modelType)
+                    iteration = 0                                
             attackSamples.append(attackSample)
+                
         return np.array(attackSamples)
             

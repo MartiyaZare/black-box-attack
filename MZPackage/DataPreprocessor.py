@@ -189,7 +189,7 @@ class DataPreprocessor:
                                 p_bar.update(1)    
         return np.swapaxes(np.array(dataList), 1, 2)
         
-    def getShiftedAngleData(self, featureTitleList, featuresToShift, count, shiftRange = 40):
+    def getShiftedAngleData(self, featureTitleList, featuresToShift, count, shiftRange = [20,40]):
         dataList = []
         for faultType in os.listdir(self.rawDataDir):
             faultTypeDir = '/'.join([self.rawDataDir,faultType])
@@ -209,7 +209,7 @@ class DataPreprocessor:
                                     randInt = random.randint(1,101)
                                     startIndex = 500 + randInt
                                     endIndex = 700 + randInt    
-                                    shiftBy = random.randint(20,shiftRange)
+                                    shiftBy = random.randint(shiftRange[0],shiftRange[1])
                                     for feature in featureTitleList:  
                                         toAppendArr = mat[feature][startIndex:endIndex]                                    
                                         if(feature in featuresToShift):
@@ -238,14 +238,32 @@ class DataPreprocessor:
                 
         return sampledBenignDataArr
         
-    def getAttackData(self):
+    def getReplayAttackData(self, count):
+        benignData = loadData("normalized_benign_data_set")
+        faultData = loadData("normalized_data_set")
+        sampledBenignDataList = random.sample(list(benignData), count)
+        sampledBenignDataArr = np.array(sampledBenignDataList)
+        sampledFaultDataList =  random.sample(list(faultData), count)
+        sampledFaultDataArr = np.array(sampledFaultDataList)
+        # Add attack
+        #tmp
+        coef = 1.4
+        sampledBenignDataArr[:,:,0:3,:] = coef * sampledFaultDataArr[:,:,0:3,:]        
+        sampledBenignDataArr[:,:,6:9,:] = coef * sampledFaultDataArr[:,:,6:9,:]        
+        return sampledBenignDataArr
+        
+    def getAttackData(self):       
         normalizedDataSet = loadData("normalized_data_set")
         normalizedAngleShiftAttackDataSet = loadData("normalized_angle_shift_attack_data_set")
         normalizedFDIAttackDataSet = loadData("normalized_fdi_attack_data_set")
         normalizedTimeSyncAttackDataSet = loadData("normalized_time_sync_attack_data_set")
+        normalizedReplayAttackDataSet = loadData("normalized_replay_attack_data_set")
+        #tmp
+        ####attackDataSetsTuple = (normalizedAngleShiftAttackDataSet, normalizedFDIAttackDataSet, normalizedTimeSyncAttackDataSet, normalizedReplayAttackDataSet)
+        attackDataSetsTuple = (normalizedAngleShiftAttackDataSet, normalizedFDIAttackDataSet, normalizedTimeSyncAttackDataSet, normalizedReplayAttackDataSet)
 
         # for now we mix all three attack data sets into one
-        attackDataSet = np.concatenate((normalizedAngleShiftAttackDataSet, normalizedFDIAttackDataSet, normalizedTimeSyncAttackDataSet), axis=0)
+        attackDataSet = np.concatenate(attackDataSetsTuple, axis=0)
         sampledAttackDataSet = np.array(random.sample(list(attackDataSet), self.attackSamplesCount))
         #sampledAttackDataSet = attackDataSet
         testSetBenign = np.reshape(normalizedDataSet[self.trainingSetSize:self.trainingSetSize+self.testSetBenignSize,:,:,:], (self.testSetBenignSize,self.windowLen,self.dimensionsCount), order = 'C')
@@ -254,4 +272,9 @@ class DataPreprocessor:
         testSetSize = self.testSetBenignSize + self.attackSamplesCount
         testSetLabels = np.zeros(testSetSize)
         testSetLabels[self.testSetBenignSize:] = np.ones(self.attackSamplesCount)
+        saveData(testSet,"sampled_normal_and_attack_test_set")
+        saveData(testSetLabels,"sampled_normal_and_attack_test_set_labels")
         return testSet, testSetLabels
+        
+    def getOldAttackData(self):  
+        return loadData("sampled_normal_and_attack_test_set"),loadData("sampled_normal_and_attack_test_set_labels")

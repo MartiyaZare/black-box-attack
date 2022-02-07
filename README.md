@@ -1,0 +1,14 @@
+Execution order:
+
+Only once if needed:
+raw_data_structure_name_fixer
+
+Then:
+data_set_builder
+attack_data_set_builder
+model_builder
+model_tester
+adversarial_sample_generator
+model_tester_on_adversarial_not_secure
+model_builder_adversarial_training
+model_tester_on_adversarial_secure

@@ -169,11 +169,14 @@ class ModelBuilder:
             returnModel = best_model
         return [returnModel,min(history.history['val_loss']),len(history.history['val_loss']),history]
         
-    def testModel(self, testSet, testSetLabels, modelType, vrbs = 1):
+    def testModel(self, testSet, testSetLabels, modelType, vrbs = 1, adv = 0, setThre = 0):
         testSet = getReshapedDataSetNoSplit(testSet, modelType)
         precisions = []
         recalls = []
-        model = load_model('Trained_Model/' + modelType + '.h5')
+        modelFileName = modelType
+        if(adv == 1):
+            modelFileName = modelType + '_adv'
+        model = load_model('Trained_Model/' + modelFileName + '.h5')
         predicted = model.predict(testSet)
         mse = None
         if(modelType == "lstm"):
@@ -185,12 +188,17 @@ class ModelBuilder:
         mse_label = np.vstack((mse, testSetLabels)).T
         precision, recall, minPositiveMSE, maxNegativeMSE  = rankedPrecisionAndRecall(mse_label)    
         precisions.append(precision)
-        recalls.append(recall)
-        thre = calculateThreshold(minPositiveMSE,maxNegativeMSE)
+        recalls.append(recall)   
+        thre = None
+        if(setThre == 1):
+            thre = calculateThreshold(minPositiveMSE,maxNegativeMSE)
+        else:
+            thresholds = loadData("thresholds")
+            thre = thresholds[modelType]
         precisionThre, recallThre = rankedPrecisionAndRecallWithThreshold(mse_label,thre)
         if(vrbs == 1):
             print("Precision without threshold is: ", precision)
-            print("Recall without threshold is: ", precision)
+            print("Recall without threshold is: ", recall)
             print("Min reconstruction error for anomalies: ", minPositiveMSE) # 0.010118610983828593
             print("max reconstruction error for benign: ", maxNegativeMSE) 
             print("Selected threshold: ",thre)
