@@ -31,9 +31,9 @@ def getReshapedDataSetThreeSplits(dataSet, modelType):
         testSet = np.reshape(dataSet[trainingSetSize:trainingSetSize+testSetBenignSize,:,:,:], (testSetBenignSize,sequenceLen*dimensionsCount), order = 'C')
         validationSet = np.reshape(dataSet[trainingSetSize+testSetBenignSize:,:,:,:], (validationSetSize,sequenceLen*dimensionsCount), order = 'C')
     elif(modelType == "conv"):        
-        trainingSet = np.reshape(dataSet[0:trainingSetSize,:,:,:], (trainingSetSize,sequenceLen*dimensionsCount,1), order = 'C')
-        testSet = np.reshape(dataSet[trainingSetSize:trainingSetSize+testSetBenignSize,:,:,:], (testSetBenignSize,sequenceLen*dimensionsCount,1), order = 'C')
-        validationSet = np.reshape(dataSet[trainingSetSize+testSetBenignSize:,:,:,:], (validationSetSize,sequenceLen*dimensionsCount,1), order = 'C')
+        trainingSet = np.reshape(dataSet[0:trainingSetSize], (trainingSetSize,sequenceLen*dimensionsCount,1), order = 'C')
+        testSet = np.reshape(dataSet[trainingSetSize:trainingSetSize+testSetBenignSize], (testSetBenignSize,sequenceLen*dimensionsCount,1), order = 'C')
+        validationSet = np.reshape(dataSet[trainingSetSize+testSetBenignSize:], (validationSetSize,sequenceLen*dimensionsCount,1), order = 'C')
     elif(modelType == "lstm"):
         trainingSet = np.reshape(dataSet[0:trainingSetSize,:,:,:], (trainingSetSize,sequenceLen,dimensionsCount), order = 'C')
         testSet = np.reshape(dataSet[trainingSetSize:trainingSetSize+testSetBenignSize,:,:,:], (testSetBenignSize,sequenceLen,dimensionsCount), order = 'C')
@@ -154,4 +154,44 @@ def plotRawData(features, faultType = 3, g1Level = 350, g2Level = 350, g3Level =
             plt.plot(mat[feature]) 
     if(saveFig):
         plt.savefig('raw_data_plot.png')
+
+# written for dat files in COMTRADE format
+def PlotRawDataDat(featureIndexes = [x for x in range(2,10)], rang = None, saveFig = 0, path = None, fileIndex = 1):
+    if path:
+        rawDataDir = path
+    else:        
+        config = loadData("config")
+        rawDataDir = config["rawDataDir"]
+    ACoeffs = []
+    BBiases = []
+    file = open("{}/{}.cfg".format(rawDataDir, str(fileIndex).zfill(4)))
+    for lineIndex, line in enumerate(file):
+        if(lineIndex >= 2):
+            result = line.split(',')
+            if(len(result) > 1):
+                ACoeffs.append(result[5])
+                BBiases.append(result[6])
+            else:
+                break
+    file.close()    
     
+    file = open("{}/{}.dat".format(rawDataDir, str(fileIndex).zfill(4)))    
+    tmpData = list()
+    dataSequence = list()
+    for lineIndex, line in enumerate(file):        
+        result = line.split(',')       
+        for index,entry in enumerate(result[2:]):
+            originalValue = float(entry) * float(ACoeffs[index]) + float(BBiases[index])
+            result[index] = originalValue        
+        dataSequence.append(result)
+    file.close()    
+    
+    dataSequenceArr = np.asarray(dataSequence, dtype=float)
+    if(rang):
+        for feature in featureIndexes:
+            plt.plot(dataSequenceArr[rang,feature]) 
+    else:
+        for feature in featureIndexes:            
+            plt.plot(dataSequenceArr[:,feature])     
+    if(saveFig):
+        plt.savefig('raw_data_plot.png')

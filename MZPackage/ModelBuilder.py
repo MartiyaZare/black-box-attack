@@ -169,14 +169,18 @@ class ModelBuilder:
             returnModel = best_model
         return [returnModel,min(history.history['val_loss']),len(history.history['val_loss']),history]
         
-    def testModel(self, testSet, testSetLabels, modelType, vrbs = 1, adv = 0, setThre = 0):
+    def testModel(self, testSet, testSetLabels, modelType, vrbs = 1, adv = 0, setThre = 0, thresholdFolderParam = None, model = None):
+        thresholdFileAddr = "thresholds"
+        if thresholdFolderParam:
+            thresholdFileAddr = '/'.join([thresholdFolderParam,thresholdFileAddr])
         testSet = getReshapedDataSetNoSplit(testSet, modelType)
         precisions = []
         recalls = []
         modelFileName = modelType
         if(adv == 1):
             modelFileName = modelType + '_adv'
-        model = load_model('Trained_Model/' + modelFileName + '.h5')
+        if model is None:
+            model = load_model('Trained_Model/' + modelFileName + '.h5')
         predicted = model.predict(testSet)
         mse = None
         if(modelType == "lstm"):
@@ -193,7 +197,7 @@ class ModelBuilder:
         if(setThre == 1):
             thre = calculateThreshold(minPositiveMSE,maxNegativeMSE)
         else:
-            thresholds = loadData("thresholds")
+            thresholds = loadData(thresholdFileAddr)
             thre = thresholds[modelType]
         precisionThre, recallThre = rankedPrecisionAndRecallWithThreshold(mse_label,thre)
         if(vrbs == 1):
@@ -204,5 +208,5 @@ class ModelBuilder:
             print("Selected threshold: ",thre)
             print("Precision by threshold is: ", precisionThre)
             print("Recall by threshold is: ", recallThre)
-        return precision, recall, precisionThre, recallThre, thre, minPositiveMSE, maxNegativeMSE
+        return precision, recall, precisionThre, recallThre, thre, minPositiveMSE, maxNegativeMSE, mse
 
